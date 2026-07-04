@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "packages/scorer/ts",
-    "extension"
+    "extension",
+    "dashboard"
   ],
   "scripts": {
     "sync-spec": "node packages/scorer/scripts/sync-spec.mjs",

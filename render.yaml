@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: alt-text-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - backend/**
+        - packages/scorer/python/**

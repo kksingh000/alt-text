@@ -10,7 +10,7 @@ extension points exist for adding a free-tier vision model later.
 |------|------|-------|--------|
 | 1. Shared scorer | Classifies alt text as `MISSING` / `GENERIC` / `DECORATIVE_UNMARKED` / `GOOD` with pure pattern matching | TypeScript + Python, driven by one canonical JSON rule spec | ✅ implemented |
 | 2. Browser extension | Scans pages (incl. SPAs via MutationObserver), announces meaningful fallbacks to screen readers, popup with per-site toggle and counts | Manifest V3, vanilla TS content script, React popup, webextension-polyfill | ✅ implemented |
-| 3. Audit dashboard | Crawl a URL or sitemap server-side, score every image, results table with WCAG 1.1.1 references and template fixes, CSV export | FastAPI (Render) + React/Vite/Tailwind (Vercel) | planned |
+| 3. Audit dashboard | Crawl a URL or sitemap server-side, score every image, results table with WCAG 1.1.1 references and template fixes, CSV export | FastAPI (Render) + React/Vite/Tailwind (Vercel) | ✅ implemented |
 
 ## Repository layout
 
@@ -40,14 +40,19 @@ alt-text/
 │   ├── tools/gen-icons.mjs        # regenerates icons (self-contained PNG encoder)
 │   └── tests/                     # scanner unit tests (jsdom) + Playwright e2e
 │
-├── backend/                       # Part 3 API — FastAPI, deployed on Render
-│   └── app/                       # crawl (httpx + BeautifulSoup first, headless browser
-│       │                          #   only as fallback for JS-rendered pages),
-│       │                          #   audit endpoints, CSV export
-│       └── captioning.py          # suggest_caption(image) stub → returns None
+├── backend/                       # Part 3 API — FastAPI, deployed on Render (implemented)
+│   ├── app/                       # crawler (httpx + BeautifulSoup, SSRF-guarded,
+│   │   │                          #   sitemap + sitemap-index support, JS-rendered
+│   │   │                          #   pages detected and flagged), audit endpoints
+│   │   └── captioning.py          # suggest_caption(src) stub → returns None
+│   └── tests/                     # 18 pytest tests, network fully mocked
 │
-└── dashboard/                     # Part 3 UI — React + Vite + Tailwind, on Vercel
-                                   # high-contrast (WCAG AAA), clinical/professional look
+├── dashboard/                     # Part 3 UI — React + Vite + Tailwind v4, on Vercel
+│   └── src/                       # stat tiles, filterable results table with WCAG refs,
+│                                  #   client-side CSV export; WCAG AAA contrast and
+│                                  #   CVD-validated category palette (implemented)
+│
+└── render.yaml                    # Render blueprint for the backend (free plan)
 ```
 
 ## Part 1 — the shared scorer
@@ -87,6 +92,10 @@ npm run test:e2e -w @alt-text/extension  # loads the real extension in Chromium
 # Python (3.10+)
 python3 -m pip install pytest
 npm run test:py          # same golden fixtures + unit tests
+
+# Backend + dashboard (Part 3)
+cd backend && pip install -r requirements-dev.txt && pytest && uvicorn app.main:app --reload
+npm run dev -w @alt-text/dashboard   # Vite dev server, proxies /api → :8000
 
 # After editing the canonical spec
 npm run sync-spec
