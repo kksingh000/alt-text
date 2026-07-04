@@ -1,0 +1,32 @@
+{
+  "name": "@alt-text/extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MV3 browser extension that flags images with missing or meaningless alt text and gives screen reader users a useful announcement instead",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:firefox": "node build.mjs --target=firefox",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "node build.mjs && node tests/e2e.mjs",
+    "icons": "node tools/gen-icons.mjs"
+  },
+  "dependencies": {
+    "@alt-text/scorer": "0.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "webextension-polyfill": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/webextension-polyfill": "^0.12.0",
+    "esbuild": "^0.25.0",
+    "jsdom": "^26.0.0",
+    "playwright": "^1.50.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

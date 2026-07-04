@@ -9,7 +9,7 @@ extension points exist for adding a free-tier vision model later.
 | Part | What | Stack | Status |
 |------|------|-------|--------|
 | 1. Shared scorer | Classifies alt text as `MISSING` / `GENERIC` / `DECORATIVE_UNMARKED` / `GOOD` with pure pattern matching | TypeScript + Python, driven by one canonical JSON rule spec | ✅ implemented |
-| 2. Browser extension | Scans pages (incl. SPAs via MutationObserver), announces meaningful fallbacks to screen readers, popup with per-site toggle and counts | Manifest V3, vanilla TS content script, React popup, webextension-polyfill | planned |
+| 2. Browser extension | Scans pages (incl. SPAs via MutationObserver), announces meaningful fallbacks to screen readers, popup with per-site toggle and counts | Manifest V3, vanilla TS content script, React popup, webextension-polyfill | ✅ implemented |
 | 3. Audit dashboard | Crawl a URL or sitemap server-side, score every image, results table with WCAG 1.1.1 references and template fixes, CSV export | FastAPI (Render) + React/Vite/Tailwind (Vercel) | planned |
 
 ## Repository layout
@@ -26,14 +26,19 @@ alt-text/
 │       ├── ts/                    # TypeScript impl → consumed by extension + dashboard
 │       └── python/                # Python impl → consumed by the FastAPI backend
 │
-├── extension/                     # Part 2 (next) — Manifest V3
-│   └── src/
-│       ├── content/               # vanilla TS: scan <img> on load + MutationObserver,
-│       │   │                      #   inject screen-reader fallbacks for MISSING/GENERIC
-│       │   └── captioning.ts      # getCaptionForImage(img) stub → returns null (hook for
-│       │                          #   a free vision API later; no refactor needed)
-│       ├── popup/                 # React: per-site toggle, category counts
-│       └── background/            # service worker: badge counts, per-site settings
+├── extension/                     # Part 2 — Manifest V3 (implemented)
+│   ├── build.mjs                  # esbuild → dist/chrome and dist/firefox (the Firefox
+│   │                              #   port is exactly this config difference)
+│   ├── src/
+│   │   ├── content/               # vanilla TS: scan <img> on load + MutationObserver,
+│   │   │   │                      #   inject screen-reader fallbacks for MISSING/GENERIC
+│   │   │   └── captioning.ts      # getCaptionForImage(img) stub → returns null (hook for
+│   │   │                          #   a free vision API later; no refactor needed)
+│   │   ├── popup/                 # React: per-site toggle, category counts (WCAG AAA)
+│   │   ├── background/            # service worker: per-tab issue-count badge
+│   │   └── shared/                # typed messages + per-site settings
+│   ├── tools/gen-icons.mjs        # regenerates icons (self-contained PNG encoder)
+│   └── tests/                     # scanner unit tests (jsdom) + Playwright e2e
 │
 ├── backend/                       # Part 3 API — FastAPI, deployed on Render
 │   └── app/                       # crawl (httpx + BeautifulSoup first, headless browser
@@ -71,8 +76,13 @@ semantics, evaluation order, and API of both implementations.
 ```bash
 # TypeScript
 npm install
-npm test                 # vitest: golden fixtures + unit tests
+npm test                 # vitest: golden fixtures + scorer/extension unit tests
 npm run -w @alt-text/scorer build
+
+# Extension
+npm run build:extension                  # → extension/dist/chrome (load unpacked)
+npm run build:firefox -w @alt-text/extension
+npm run test:e2e -w @alt-text/extension  # loads the real extension in Chromium
 
 # Python (3.10+)
 python3 -m pip install pytest
