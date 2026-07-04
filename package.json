@@ -1,0 +1,12 @@
+{
+  "name": "alt-text-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/scorer/ts"
+  ],
+  "scripts": {
+    "sync-spec": "node packages/scorer/scripts/sync-spec.mjs",
+    "test": "npm run test --workspaces",
+    "test:py": "python3 -m pytest packages/scorer/python/tests -q"
+  }
+}

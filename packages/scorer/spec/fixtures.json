@@ -1,0 +1,240 @@
+{
+  "comment": "Golden test cases shared by the TypeScript and Python implementations. Both test suites load this file and must produce identical results. Input fields: alt (null = attribute absent), src, width, height, role, ariaHidden.",
+  "cases": [
+    {
+      "name": "no alt attribute at all",
+      "input": { "alt": null, "src": "https://example.com/products/red-shoe.jpg" },
+      "expected": { "category": "MISSING", "reason": "no-alt-attribute" }
+    },
+    {
+      "name": "empty alt on a content-sized image",
+      "input": { "alt": "", "src": "https://example.com/team/founders.jpg", "width": 800, "height": 600 },
+      "expected": { "category": "MISSING", "reason": "empty-alt" }
+    },
+    {
+      "name": "whitespace-only alt",
+      "input": { "alt": "   ", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "MISSING", "reason": "whitespace-only-alt" }
+    },
+    {
+      "name": "lone generic word: image",
+      "input": { "alt": "image", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-word" }
+    },
+    {
+      "name": "lone generic word is case-insensitive",
+      "input": { "alt": "Photo", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-word" }
+    },
+    {
+      "name": "lone generic word survives surrounding whitespace",
+      "input": { "alt": "  ICON  ", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-word" }
+    },
+    {
+      "name": "lone generic word: logo",
+      "input": { "alt": "logo", "src": "https://example.com/brand.png" },
+      "expected": { "category": "GENERIC", "reason": "generic-word" }
+    },
+    {
+      "name": "lone generic word: screenshot",
+      "input": { "alt": "screenshot", "src": "https://example.com/a.png" },
+      "expected": { "category": "GENERIC", "reason": "generic-word" }
+    },
+    {
+      "name": "camera default img_1234",
+      "input": { "alt": "img_1234", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "camera default IMG-2045 uppercase with dash",
+      "input": { "alt": "IMG-2045", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "camera default DSC_0042",
+      "input": { "alt": "DSC_0042", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "Pixel phone default with multiple digit groups",
+      "input": { "alt": "PXL_20240115_103012345", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "image with trailing digits",
+      "input": { "alt": "image_012", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "photo with trailing digit",
+      "input": { "alt": "photo-7", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "long pure digit string (timestamp)",
+      "input": { "alt": "1699999999", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "date-stamped filename body 20240115_123456",
+      "input": { "alt": "20240115_123456", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "macOS screenshot default name",
+      "input": { "alt": "Screenshot 2024-01-15 at 10.33.12", "src": "https://example.com/a.png" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "GNOME screenshot default name",
+      "input": { "alt": "Screenshot from 2024-01-15 10-33-12", "src": "https://example.com/a.png" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "WhatsApp image default name",
+      "input": { "alt": "WhatsApp Image 2024-03-02 at 14.22.01", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "alt is literally a filename with extension",
+      "input": { "alt": "sunset-beach.jpg", "src": "https://example.com/other.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "alt is a filename with modern extension",
+      "input": { "alt": "hero.webp", "src": "https://example.com/hero-2.webp" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "hex hash string",
+      "input": { "alt": "a3f8b2c91d024e7f", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "uuid string",
+      "input": { "alt": "550e8400-e29b-41d4-a716-446655440000", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "untitled with counter",
+      "input": { "alt": "Untitled-3", "src": "https://example.com/a.png" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "asset with counter",
+      "input": { "alt": "asset_12", "src": "https://example.com/a.png" },
+      "expected": { "category": "GENERIC", "reason": "generic-pattern" }
+    },
+    {
+      "name": "alt identical to src filename stem",
+      "input": { "alt": "golden-gate", "src": "https://cdn.example.com/uploads/golden-gate.jpg?w=1200" },
+      "expected": { "category": "GENERIC", "reason": "matches-filename" }
+    },
+    {
+      "name": "alt identical to filename stem, case-insensitive",
+      "input": { "alt": "Hero-Banner-Final", "src": "https://cdn.example.com/assets/hero-banner-final.webp" },
+      "expected": { "category": "GENERIC", "reason": "matches-filename" }
+    },
+    {
+      "name": "single character alt",
+      "input": { "alt": "x", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "single-short-word" }
+    },
+    {
+      "name": "single short word alt",
+      "input": { "alt": "map", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GENERIC", "reason": "single-short-word" }
+    },
+    {
+      "name": "1x1 tracking pixel without alt",
+      "input": { "alt": null, "src": "https://example.com/spacer.gif", "width": 1, "height": 1 },
+      "expected": { "category": "DECORATIVE_UNMARKED", "reason": "tiny-image-unmarked" }
+    },
+    {
+      "name": "1px-wide spacer with generic alt",
+      "input": { "alt": "spacer", "src": "https://example.com/spacer.gif", "width": 1, "height": 50 },
+      "expected": { "category": "DECORATIVE_UNMARKED", "reason": "tiny-image-unmarked" }
+    },
+    {
+      "name": "decorative filename divider without alt",
+      "input": { "alt": null, "src": "https://example.com/img/divider-2.png" },
+      "expected": { "category": "DECORATIVE_UNMARKED", "reason": "decorative-filename-unmarked" }
+    },
+    {
+      "name": "bullet graphic with generic alt",
+      "input": { "alt": "bullet", "src": "https://example.com/icons/bullet.gif" },
+      "expected": { "category": "DECORATIVE_UNMARKED", "reason": "decorative-filename-unmarked" }
+    },
+    {
+      "name": "tiny 16x16 image without alt",
+      "input": { "alt": null, "src": "https://example.com/photos/team.jpg", "width": 16, "height": 16 },
+      "expected": { "category": "DECORATIVE_UNMARKED", "reason": "tiny-image-unmarked" }
+    },
+    {
+      "name": "classic clear.gif without alt",
+      "input": { "alt": null, "src": "https://example.com/clear.gif" },
+      "expected": { "category": "DECORATIVE_UNMARKED", "reason": "decorative-filename-unmarked" }
+    },
+    {
+      "name": "tiny image correctly marked with empty alt",
+      "input": { "alt": "", "src": "https://example.com/spacer.gif", "width": 1, "height": 1 },
+      "expected": { "category": "GOOD", "reason": "decorative-correctly-marked" }
+    },
+    {
+      "name": "role=presentation without alt",
+      "input": { "alt": null, "src": "https://example.com/flourish.png", "role": "presentation" },
+      "expected": { "category": "GOOD", "reason": "explicitly-marked-decorative" }
+    },
+    {
+      "name": "role=none overrides generic alt",
+      "input": { "alt": "img_1234", "src": "https://example.com/a.jpg", "role": "none" },
+      "expected": { "category": "GOOD", "reason": "explicitly-marked-decorative" }
+    },
+    {
+      "name": "aria-hidden overrides everything",
+      "input": { "alt": "anything", "src": "https://example.com/a.jpg", "ariaHidden": true },
+      "expected": { "category": "GOOD", "reason": "explicitly-marked-decorative" }
+    },
+    {
+      "name": "descriptive alt passes",
+      "input": { "alt": "Golden retriever catching a red frisbee mid-air", "src": "https://example.com/dog.jpg" },
+      "expected": { "category": "GOOD", "reason": "descriptive" }
+    },
+    {
+      "name": "descriptive chart alt passes",
+      "input": { "alt": "Bar chart showing revenue growing 40% from 2023 to 2024", "src": "https://example.com/chart.png" },
+      "expected": { "category": "GOOD", "reason": "descriptive" }
+    },
+    {
+      "name": "descriptive alt starting with Screenshot passes (only default filenames are flagged)",
+      "input": { "alt": "Screenshot of the billing settings page with dark mode enabled", "src": "https://example.com/a.png" },
+      "expected": { "category": "GOOD", "reason": "descriptive" }
+    },
+    {
+      "name": "tiny icon with meaningful alt passes (tiny heuristic only fires on missing or generic alt)",
+      "input": { "alt": "Search", "src": "https://example.com/icons/search-icon.svg", "width": 16, "height": 16 },
+      "expected": { "category": "GOOD", "reason": "descriptive" }
+    },
+    {
+      "name": "short non-ASCII alt passes (length heuristic is ASCII-only)",
+      "input": { "alt": "海辺の夕日", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GOOD", "reason": "descriptive" }
+    },
+    {
+      "name": "short word inside a phrase passes",
+      "input": { "alt": "Map of downtown Seattle", "src": "https://example.com/map.png" },
+      "expected": { "category": "GOOD", "reason": "descriptive" }
+    },
+    {
+      "name": "multi-word alt containing a generic word passes",
+      "input": { "alt": "Anthropic logo", "src": "https://example.com/logo.png" },
+      "expected": { "category": "GOOD", "reason": "descriptive" }
+    },
+    {
+      "name": "data URI src skips filename heuristics",
+      "input": { "alt": "Signature of Ada Lovelace", "src": "data:image/png;base64,iVBORw0KGgo=" },
+      "expected": { "category": "GOOD", "reason": "descriptive" }
+    }
+  ]
+}
