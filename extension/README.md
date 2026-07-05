@@ -19,8 +19,12 @@ feedback loops), and re-scans are idempotent. Originals are persisted in a
 `data-altguard-orig` attribute so toggling off — even after an extension
 update reset the content script — restores the page exactly.
 
-Known limitation: the content script runs in the top frame only; images
-inside iframes (ads, embeds) are not yet scanned.
+Frames: the content script runs in every frame (`all_frames: true`), so
+images inside iframes (ads, embeds) are scanned and announced too. The badge
+aggregates issues across all frames of a tab; the popup shows the top frame's
+breakdown. The per-site toggle is keyed by each frame's own origin — a
+cross-origin embed follows its own host's setting, applied live via
+`storage.onChanged`.
 
 ## Build & load
 

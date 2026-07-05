@@ -16,7 +16,10 @@ type ViewState =
   | { status: 'ready'; tabId: number; report: PageReport };
 
 async function sendToTab(tabId: number, message: ContentRequest): Promise<PageReport> {
-  return (await browser.tabs.sendMessage(tabId, message)) as PageReport;
+  // Talk to the top frame only — its counts are what the popup shows, and
+  // subframes follow enable/disable changes via storage.onChanged. The badge
+  // (background) aggregates every frame.
+  return (await browser.tabs.sendMessage(tabId, message, { frameId: 0 })) as PageReport;
 }
 
 export function App() {

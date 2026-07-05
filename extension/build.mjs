@@ -50,6 +50,9 @@ const manifest = {
       matches: ['<all_urls>'],
       js: ['content.js'],
       run_at: 'document_idle',
+      // Ads/embeds hide plenty of alt-text problems; every frame scans its
+      // own document and the badge aggregates per tab.
+      all_frames: true,
     },
   ],
   background:

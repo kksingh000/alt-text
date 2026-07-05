@@ -14,10 +14,14 @@ const extensionPath = join(here, '..', 'dist', 'chrome');
 assert.ok(existsSync(join(extensionPath, 'manifest.json')), 'run `npm run build` first');
 
 const fixture = readFileSync(join(here, 'fixtures', 'page.html'));
+const frameHtml = '<!DOCTYPE html><html lang="en"><body><img id="frame-missing" src="/f.jpg"></body></html>';
 const server = createServer((req, res) => {
   if (req.url === '/') {
     res.setHeader('content-type', 'text/html');
     res.end(fixture);
+  } else if (req.url === '/frame') {
+    res.setHeader('content-type', 'text/html');
+    res.end(frameHtml);
   } else {
     res.statusCode = 404;
     res.end();
@@ -69,7 +73,16 @@ try {
     null,
     'spacer alt attribute stays absent',
   );
-  console.log('e2e OK: content script scored and annotated the fixture page');
+  // Images inside iframes are scanned too (all_frames: true).
+  const frame = page.frameLocator('#embed');
+  await frame.locator('img[data-altguard]').waitFor({ timeout: 10_000 });
+  assert.equal(
+    await frame.locator('#frame-missing').getAttribute('alt'),
+    'Image, no description available',
+    'missing alt inside an iframe gets the fallback announcement',
+  );
+
+  console.log('e2e OK: content script scored and annotated the fixture page (incl. iframe)');
 
   // --- options page + live settings sync ---
   let [worker] = context.serviceWorkers();

@@ -55,9 +55,10 @@ references the scorer by relative path, which pip resolves against CWD.
 - The single future-AI hooks: `extension/src/content/captioning.ts`
   (`getCaptionForImage`) and `backend/app/captioning.py` (`suggest_caption`
   — any fetch there must go through the crawler's SSRF guard).
-- Known limitation: content script runs top-frame only (no `all_frames`);
-  iframe images are unscanned. Adding it requires frame-aware badge
-  aggregation in the background worker.
+- Content scripts run in every frame (`all_frames: true`). The background
+  worker aggregates badge counts per (tab, frame); the popup talks to
+  frameId 0 only, and subframes follow settings via `storage.onChanged`.
+  Per-site toggles key on each frame's own origin.
 
 ## Backend gotchas
 
