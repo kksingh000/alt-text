@@ -15,7 +15,12 @@ survivable for screen reader users:
 
 SPA-safe: a debounced `MutationObserver` re-scans on DOM changes, scoring is
 always based on the author's original alt (never our own injection, so no
-feedback loops), and re-scans are idempotent.
+feedback loops), and re-scans are idempotent. Originals are persisted in a
+`data-altguard-orig` attribute so toggling off — even after an extension
+update reset the content script — restores the page exactly.
+
+Known limitation: the content script runs in the top frame only; images
+inside iframes (ads, embeds) are not yet scanned.
 
 ## Build & load
 
