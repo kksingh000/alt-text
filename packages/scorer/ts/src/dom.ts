@@ -13,9 +13,11 @@ export interface ImgElementLike {
 
 function dimension(natural: number | undefined, attrValue: string | null): number | null {
   if (natural !== undefined && natural > 0) return natural;
-  if (attrValue === null) return null;
+  // Only plain pixel integers: parseInt would truncate width="2%" to 2 and
+  // misclassify a fluid-layout content image as a tiny decorative spacer.
+  if (attrValue === null || !/^\s*\d+\s*$/.test(attrValue)) return null;
   const parsed = Number.parseInt(attrValue, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  return parsed > 0 ? parsed : null;
 }
 
 /**
@@ -30,6 +32,6 @@ export function imageInputFromElement(el: ImgElementLike): ImageInput {
     width: dimension(el.naturalWidth, el.getAttribute('width')),
     height: dimension(el.naturalHeight, el.getAttribute('height')),
     role: el.getAttribute('role'),
-    ariaHidden: el.getAttribute('aria-hidden') === 'true',
+    ariaHidden: (el.getAttribute('aria-hidden') ?? '').trim().toLowerCase() === 'true',
   };
 }

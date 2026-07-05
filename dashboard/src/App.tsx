@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CATEGORY_ORDER, SPEC } from '@alt-text/scorer';
 import { ApiError, runAudit } from './api';
 import { AuditForm } from './components/AuditForm';
 import { Badge } from './components/Badge';
@@ -13,12 +14,10 @@ type ViewState =
   | { status: 'error'; message: string }
   | { status: 'done'; audit: AuditResponse };
 
+// Filter labels come from the shared spec so every surface says the same thing.
 const FILTERS: Array<{ key: AltTextCategory | 'ALL'; label: string }> = [
   { key: 'ALL', label: 'All' },
-  { key: 'MISSING', label: 'Missing' },
-  { key: 'GENERIC', label: 'Generic' },
-  { key: 'DECORATIVE_UNMARKED', label: 'Unmarked decorative' },
-  { key: 'GOOD', label: 'Good' },
+  ...CATEGORY_ORDER.map((key) => ({ key, label: SPEC.categories[key].shortLabel })),
 ];
 
 export function App() {
@@ -148,26 +147,12 @@ function ExampleLegend() {
         What the categories mean
       </h2>
       <ul className="flex flex-col gap-2.5">
-        <li className="flex items-baseline gap-3">
-          <Badge category="MISSING" />
-          <span className="text-muted">No alt attribute, or an empty alt on a content image.</span>
-        </li>
-        <li className="flex items-baseline gap-3">
-          <Badge category="GENERIC" />
-          <span className="text-muted">
-            Filename-style or placeholder alt text: img_1234, DSC_0042, “photo”.
-          </span>
-        </li>
-        <li className="flex items-baseline gap-3">
-          <Badge category="DECORATIVE_UNMARKED" />
-          <span className="text-muted">
-            Looks decorative (spacer, divider, tiny graphic) but isn’t hidden from screen readers.
-          </span>
-        </li>
-        <li className="flex items-baseline gap-3">
-          <Badge category="GOOD" />
-          <span className="text-muted">Descriptive alt text, or correctly marked decorative.</span>
-        </li>
+        {CATEGORY_ORDER.map((key) => (
+          <li key={key} className="flex items-baseline gap-3">
+            <Badge category={key} />
+            <span className="text-muted">{SPEC.categories[key].description}</span>
+          </li>
+        ))}
       </ul>
     </section>
   );

@@ -1,8 +1,9 @@
 import type { AuditResponse } from './types';
 
 // Empty in dev (Vite proxies /api to localhost:8000); set VITE_API_URL to the
-// Render service URL in the Vercel project settings for production.
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+// Render service URL in the Vercel project settings for production. Trailing
+// slashes are stripped so "https://api.example.com/" doesn't yield "//api/…".
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '');
 
 export class ApiError extends Error {}
 

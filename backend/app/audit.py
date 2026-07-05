@@ -2,7 +2,9 @@
 aggregate per page and overall."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
+from typing import Literal
 
 import httpx
 from alt_text_scorer import score_image, summarize
@@ -11,7 +13,9 @@ from .captioning import suggest_caption
 from .crawler import FetchError, fetch, parse_images, parse_sitemap
 from .models import AuditResponse, ImageResult, PageResult, WcagRef
 
-ZERO_COUNTS = {"MISSING": 0, "GENERIC": 0, "DECORATIVE_UNMARKED": 0, "GOOD": 0}
+# Bounds concurrent page/sitemap fetches per audit — polite to the audited
+# site while keeping a 20-page sitemap audit at seconds, not minutes.
+MAX_CONCURRENT_FETCHES = 5
 
 
 async def audit_html(url: str, html: str) -> PageResult:
@@ -40,6 +44,7 @@ async def audit_html(url: str, html: str) -> PageResult:
                     url=result.wcag.url,
                 ),
                 suggested_fix=result.suggested_fix,
+                screen_reader_fallback=result.screen_reader_fallback,
                 suggested_caption=caption,
             )
         )
@@ -56,7 +61,7 @@ async def audit_page(url: str, client: httpx.AsyncClient) -> PageResult:
     try:
         response = await fetch(url, client)
     except (FetchError, httpx.HTTPError) as exc:
-        return PageResult(url=url, fetched=False, error=str(exc), counts=dict(ZERO_COUNTS))
+        return PageResult(url=url, fetched=False, error=str(exc), counts=summarize([]))
     return await audit_html(url, response.text)
 
 
@@ -65,18 +70,27 @@ async def _resolve_sitemap_pages(
 ) -> list[str]:
     if kind == "urlset":
         return locs[:max_pages]
-    # sitemapindex: flatten one level of child sitemaps.
+
+    # sitemapindex: flatten one level of child sitemaps, fetched concurrently.
+    # Fetch at most max_pages children — even if every child yielded a single
+    # page URL that would already satisfy the cap.
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT_FETCHES)
+
+    async def fetch_child(child_url: str) -> list[str]:
+        async with semaphore:
+            try:
+                child = await fetch(child_url, client)
+            except (FetchError, httpx.HTTPError):
+                return []
+        parsed = parse_sitemap(child.text)
+        return parsed[1] if parsed and parsed[0] == "urlset" else []
+
+    children = await asyncio.gather(*(fetch_child(u) for u in locs[:max_pages]))
     page_urls: list[str] = []
-    for child_url in locs:
+    for child_pages in children:
+        page_urls.extend(child_pages[: max_pages - len(page_urls)])
         if len(page_urls) >= max_pages:
             break
-        try:
-            child = await fetch(child_url, client)
-        except (FetchError, httpx.HTTPError):
-            continue
-        parsed = parse_sitemap(child.text)
-        if parsed and parsed[0] == "urlset":
-            page_urls.extend(parsed[1][: max_pages - len(page_urls)])
     return page_urls
 
 
@@ -85,7 +99,7 @@ async def run_audit(url: str, max_pages: int) -> AuditResponse:
         response = await fetch(url, client)
         content_type = response.headers.get("content-type", "")
 
-        source = "page"
+        source: Literal["page", "sitemap"] = "page"
         pages: list[PageResult]
         looks_like_xml = "xml" in content_type or url.split("?", 1)[0].lower().endswith(".xml")
         sitemap = parse_sitemap(response.text) if looks_like_xml else None
@@ -93,11 +107,17 @@ async def run_audit(url: str, max_pages: int) -> AuditResponse:
         if sitemap:
             source = "sitemap"
             page_urls = await _resolve_sitemap_pages(sitemap[0], sitemap[1], max_pages, client)
-            pages = [await audit_page(page_url, client) for page_url in page_urls]
+            semaphore = asyncio.Semaphore(MAX_CONCURRENT_FETCHES)
+
+            async def bounded_audit(page_url: str) -> PageResult:
+                async with semaphore:
+                    return await audit_page(page_url, client)
+
+            pages = list(await asyncio.gather(*(bounded_audit(u) for u in page_urls)))
         else:
             pages = [await audit_html(url, response.text)]
 
-    totals = dict(ZERO_COUNTS)
+    totals = summarize([])
     for page in pages:
         for category, count in page.counts.items():
             totals[category] += count

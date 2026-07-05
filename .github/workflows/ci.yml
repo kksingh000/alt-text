@@ -37,7 +37,11 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-      - run: pip install -r backend/requirements-dev.txt
+      # Run from backend/ — the requirements file installs the scorer via the
+      # relative path ../packages/scorer/python, which pip resolves against
+      # the process CWD, not the requirements file's location.
+      - run: pip install -r requirements-dev.txt
+        working-directory: backend
       - name: Golden fixtures + backend tests
         run: python -m pytest packages/scorer/python/tests backend/tests -q
 

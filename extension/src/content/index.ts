@@ -9,10 +9,23 @@ const scanner = new AltTextScanner();
 let enabled = false;
 let lastSummary: ScanSummary | null = null;
 let scanTimer: ReturnType<typeof setTimeout> | undefined;
+// Bumped by disable(); an in-flight scan sees the change, stops writing to
+// the DOM, and its (stale) summary is discarded.
+let generation = 0;
+// Serializes scans so two runScan() calls can never interleave DOM writes or
+// race their lastSummary assignments.
+let scanQueue: Promise<void> = Promise.resolve();
 
-async function runScan(): Promise<void> {
-  lastSummary = await scanner.scan(document);
-  publishBadge();
+function runScan(): Promise<void> {
+  const gen = generation;
+  scanQueue = scanQueue.then(async () => {
+    if (gen !== generation || !enabled) return;
+    const summary = await scanner.scan(document, () => gen !== generation);
+    if (gen !== generation) return;
+    lastSummary = summary;
+    publishBadge();
+  });
+  return scanQueue;
 }
 
 // Debounced so SPA mutation bursts trigger one re-scan. Our own alt writes
@@ -47,7 +60,7 @@ async function enable(): Promise<void> {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['src', 'alt', 'role', 'aria-hidden'],
+    attributeFilter: ['src', 'alt', 'role', 'aria-hidden', 'width', 'height'],
   });
   await runScan();
 }
@@ -55,6 +68,7 @@ async function enable(): Promise<void> {
 function disable(): void {
   if (!enabled) return;
   enabled = false;
+  generation += 1;
   observer.disconnect();
   clearTimeout(scanTimer);
   scanner.restore(document);
@@ -62,16 +76,26 @@ function disable(): void {
   publishBadge();
 }
 
+// Every entry point below awaits `ready` first so a message or storage event
+// arriving during the async init can't race it (e.g. a SET_ENABLED(false)
+// landing before the initial isHostEnabled read resolves being undone by it).
+const ready: Promise<void> = (async () => {
+  if (await isHostEnabled(location.host)) await enable();
+  else publishBadge();
+})();
+
 browser.runtime.onMessage.addListener((message: unknown): Promise<PageReport> | undefined => {
   const request = message as ContentRequest;
   if (request?.type === 'GET_REPORT') {
     return (async () => {
+      await ready;
       if (enabled && lastSummary === null) await runScan();
       return report();
     })();
   }
   if (request?.type === 'SET_ENABLED') {
     return (async () => {
+      await ready;
       await setHostEnabled(location.host, request.enabled);
       if (request.enabled) await enable();
       else disable();
@@ -87,6 +111,7 @@ browser.runtime.onMessage.addListener((message: unknown): Promise<PageReport> | 
 browser.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local' || !(DISABLED_HOSTS_KEY in changes)) return;
   void (async () => {
+    await ready;
     if (await isHostEnabled(location.host)) await enable();
     else disable();
   })();
@@ -97,8 +122,3 @@ browser.storage.onChanged.addListener((changes, area) => {
 window.addEventListener('load', () => {
   if (enabled) scheduleScan();
 });
-
-void (async () => {
-  if (await isHostEnabled(location.host)) await enable();
-  else publishBadge();
-})();

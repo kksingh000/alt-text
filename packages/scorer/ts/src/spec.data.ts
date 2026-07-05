@@ -63,6 +63,8 @@ export const SPEC: ScorerSpec = {
   "categories": {
     "MISSING": {
       "label": "Missing alt text",
+      "shortLabel": "Missing",
+      "description": "No alt attribute, or an empty alt on a content image.",
       "severity": "error",
       "wcag": {
         "criterion": "1.1.1",
@@ -75,6 +77,8 @@ export const SPEC: ScorerSpec = {
     },
     "GENERIC": {
       "label": "Generic or placeholder alt text",
+      "shortLabel": "Generic",
+      "description": "Filename-style or placeholder alt text: img_1234, DSC_0042, \"photo\".",
       "severity": "warning",
       "wcag": {
         "criterion": "1.1.1",
@@ -87,6 +91,8 @@ export const SPEC: ScorerSpec = {
     },
     "DECORATIVE_UNMARKED": {
       "label": "Decorative image not marked as decorative",
+      "shortLabel": "Unmarked decorative",
+      "description": "Looks decorative (spacer, divider, tiny graphic) but isn't hidden from screen readers.",
       "severity": "warning",
       "wcag": {
         "criterion": "1.1.1",
@@ -99,6 +105,8 @@ export const SPEC: ScorerSpec = {
     },
     "GOOD": {
       "label": "Alt text present and specific",
+      "shortLabel": "Good",
+      "description": "Descriptive alt text, or correctly marked decorative.",
       "severity": "pass",
       "wcag": {
         "criterion": "1.1.1",

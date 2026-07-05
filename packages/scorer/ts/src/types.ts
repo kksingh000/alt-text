@@ -29,11 +29,17 @@ export interface WcagReference {
 
 export interface CategoryMeta {
   label: string;
+  /** Short display label for UI chips/tiles ("Missing", "Good", …). */
+  shortLabel: string;
+  /** One-sentence explanation of the category for legends and tooltips. */
+  description: string;
   severity: Severity;
   wcag: WcagReference;
   suggestedFix: string;
   screenReaderFallback: string | null;
 }
+
+export type CategoryCounts = Record<AltTextCategory, number>;
 
 export interface ScorerSpec {
   version: number;

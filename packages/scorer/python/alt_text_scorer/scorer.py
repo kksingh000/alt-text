@@ -20,11 +20,21 @@ SPEC: dict = json.loads(
     resources.files(__package__).joinpath("spec_data.json").read_text(encoding="utf-8")
 )
 
+def _compile(pattern: str) -> "re.Pattern[str]":
+    """Compile a spec pattern with JavaScript-compatible semantics.
+
+    - re.ASCII keeps \\d/\\w/\\s ASCII-only, matching JS where \\d is [0-9]
+      (Python's default \\d also matches e.g. Arabic-Indic digits).
+    - '$' is replaced with \\Z because Python's '$' also matches just before a
+      trailing newline, while JS '$' (no /m flag) matches only at the very end.
+    Spec patterns must stay within the JS/Python common syntax subset.
+    """
+    return re.compile(pattern.replace("$", r"\Z"), re.IGNORECASE | re.ASCII)
+
+
 _GENERIC_WORDS = frozenset(SPEC["genericWords"])
-_GENERIC_ALT_PATTERNS = [re.compile(p, re.IGNORECASE) for p in SPEC["genericAltPatterns"]]
-_DECORATIVE_FILENAME_PATTERNS = [
-    re.compile(p, re.IGNORECASE) for p in SPEC["decorativeFilenamePatterns"]
-]
+_GENERIC_ALT_PATTERNS = [_compile(p) for p in SPEC["genericAltPatterns"]]
+_DECORATIVE_FILENAME_PATTERNS = [_compile(p) for p in SPEC["decorativeFilenamePatterns"]]
 _DECORATIVE_ROLES = frozenset({"presentation", "none"})
 _ASCII_ONLY = re.compile(r"^[\x00-\x7f]+$")
 _THRESHOLDS = SPEC["thresholds"]
@@ -82,7 +92,23 @@ def _filename_from_src(src: str) -> Optional[str]:
         return None
     from urllib.parse import unquote
 
-    return unquote(last).lower()
+    try:
+        # errors="strict" mirrors JS decodeURIComponent, which throws on
+        # malformed sequences (we then keep the raw string, as scorer.ts does);
+        # the default errors="replace" would silently produce U+FFFD instead.
+        return unquote(last, errors="strict").lower()
+    except UnicodeDecodeError:
+        return last.lower()
+
+
+def _trim(value: str) -> str:
+    """JS String.prototype.trim parity: also strips U+FEFF (BOM/ZWNBSP),
+    which Python's str.strip() does not treat as whitespace."""
+    prev = None
+    while prev != value:
+        prev = value
+        value = value.strip().strip("﻿")
+    return value
 
 
 def _filename_stem(filename: str) -> str:
@@ -111,7 +137,7 @@ def _baseline(alt: Optional[str], src: str) -> tuple[AltTextCategory, str]:
         return "MISSING", "no-alt-attribute"
     if alt == "":
         return "MISSING", "empty-alt"
-    trimmed = alt.strip()
+    trimmed = _trim(alt)
     if trimmed == "":
         return "MISSING", "whitespace-only-alt"
 
@@ -190,7 +216,9 @@ def score_alt_text(alt: Optional[str], src: str = "") -> ScoreResult:
 def _parse_dimension(value: Optional[str]) -> Optional[int]:
     if value is None:
         return None
-    match = re.match(r"\s*(\d+)", value)
+    # Only plain pixel integers: a prefix match would truncate width="2%" to 2
+    # and misclassify a fluid-layout content image as a tiny decorative spacer.
+    match = re.fullmatch(r"\s*(\d+)\s*", value, re.ASCII)
     if not match:
         return None
     parsed = int(match.group(1))

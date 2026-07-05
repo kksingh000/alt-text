@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AltTextScanner, MARKER_ATTR } from '../src/content/scanner';
+import { AltTextScanner, MARKER_ATTR, ORIGINAL_ALT_ATTR } from '../src/content/scanner';
 
 function addImg(attrs: Record<string, string>): HTMLImageElement {
   const img = document.createElement('img');
@@ -95,6 +95,51 @@ describe('AltTextScanner', () => {
     expect(summary.counts.GOOD).toBe(1);
     expect(summary.counts.GENERIC).toBe(0);
     expect(img.getAttribute('alt')).toBe('A brown dog running through shallow surf');
+    expect(img.hasAttribute(MARKER_ATTR)).toBe(false);
+  });
+
+  it('re-scores when dimensions become known (window load / lazy load)', async () => {
+    const img = addImg({ src: 'https://example.com/track.gif' });
+    const scanner = new AltTextScanner();
+    const before = await scanner.scan(document);
+    expect(before.counts.MISSING).toBe(1);
+
+    // Dimension attributes arrive later (or natural size becomes known).
+    img.setAttribute('width', '1');
+    img.setAttribute('height', '1');
+    const after = await scanner.scan(document);
+
+    expect(after.counts.MISSING).toBe(0);
+    expect(after.counts.DECORATIVE_UNMARKED).toBe(1);
+  });
+
+  it('restores originals from persisted attributes after a context reload', async () => {
+    const missing = addImg({ src: 'https://example.com/dog.jpg' });
+    const generic = addImg({ src: 'https://example.com/a.jpg', alt: 'img_1234' });
+    const first = new AltTextScanner();
+    await first.scan(document);
+    expect(generic.getAttribute(ORIGINAL_ALT_ATTR)).toBe('img_1234');
+
+    // Fresh scanner = fresh WeakMap, as after an extension update/reload.
+    const second = new AltTextScanner();
+    const summary = await second.scan(document);
+    // Does NOT adopt its own injected text as author content:
+    expect(summary.counts.GENERIC).toBe(1);
+    expect(summary.counts.MISSING).toBe(1);
+
+    second.restore(document);
+    expect(missing.hasAttribute('alt')).toBe(false);
+    expect(generic.getAttribute('alt')).toBe('img_1234');
+    expect(generic.hasAttribute(ORIGINAL_ALT_ATTR)).toBe(false);
+  });
+
+  it('stops writing to the DOM when cancelled mid-scan', async () => {
+    const img = addImg({ src: 'https://example.com/dog.jpg' });
+    const scanner = new AltTextScanner();
+
+    await scanner.scan(document, () => true);
+
+    expect(img.hasAttribute('alt')).toBe(false);
     expect(img.hasAttribute(MARKER_ATTR)).toBe(false);
   });
 

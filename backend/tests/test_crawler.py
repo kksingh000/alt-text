@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from app.crawler import FetchError, assert_public_http_url, parse_images, parse_sitemap
 
@@ -7,7 +9,7 @@ PAGE = """
   <img src="/img/dog.jpg">
   <img src="hero.webp" alt="img_1234">
   <img src="https://cdn.example.com/cat.jpg" alt="A tabby cat sleeping on a windowsill">
-  <img data-src="https://cdn.example.com/lazy.jpg" alt="">
+  <img src="/blank.gif" data-src="https://cdn.example.com/lazy.jpg" alt="">
   <img src="/spacer.gif" width="1" height="1">
 </body></html>
 """
@@ -22,7 +24,7 @@ def test_parse_images_extracts_inputs_and_absolute_srcs():
     assert srcs[0] == "https://example.com/img/dog.jpg"
     assert srcs[1] == "https://example.com/blog/hero.webp"
     assert srcs[2] == "https://cdn.example.com/cat.jpg"
-    # lazy-loading fallback attribute is honoured
+    # the real data-src beats the lazy-loading placeholder src
     assert srcs[3] == "https://cdn.example.com/lazy.jpg"
 
     first = scan.images[0][0]
@@ -80,4 +82,4 @@ def test_parse_sitemap_rejects_html_and_garbage():
 )
 def test_ssrf_guard_rejects_non_public_targets(url):
     with pytest.raises(FetchError):
-        assert_public_http_url(url)
+        asyncio.run(assert_public_http_url(url))

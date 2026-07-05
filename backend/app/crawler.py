@@ -7,8 +7,8 @@ with a headless browser is a deliberate non-goal for the zero-cost MVP (see
 """
 from __future__ import annotations
 
+import asyncio
 import ipaddress
-import socket
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlparse
@@ -21,20 +21,23 @@ USER_AGENT = "AltTextAuditBot/0.1 (accessibility audit; +https://github.com/kksi
 FETCH_TIMEOUT_SECONDS = 15.0
 MAX_REDIRECTS = 5
 
-# src fallbacks used by common lazy-loading libraries.
-LAZY_SRC_ATTRS = ("src", "data-src", "data-lazy-src", "data-original")
+# Lazy-loading libraries put the real image in data-* and a placeholder (or
+# nothing) in src, so the data-* attributes take priority when present.
+LAZY_SRC_ATTRS = ("data-src", "data-lazy-src", "data-original", "src")
 
 
 class FetchError(Exception):
     """A URL we refuse to fetch or could not fetch."""
 
 
-def assert_public_http_url(url: str) -> None:
+async def assert_public_http_url(url: str) -> None:
     """SSRF guard: only http(s) to hosts that resolve to public addresses.
 
-    This runs on every redirect hop as well as the initial URL. (DNS could
-    still change between this check and the actual request — acceptable for
-    an MVP; a production deployment should pin the resolved address.)
+    This runs on every redirect hop as well as the initial URL, and resolves
+    DNS on the event loop's resolver so a slow lookup never blocks other
+    requests. (DNS could still change between this check and the actual
+    request — acceptable for an MVP; a production deployment should pin the
+    resolved address.)
     """
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
@@ -43,8 +46,8 @@ def assert_public_http_url(url: str) -> None:
     if not host:
         raise FetchError("URL has no host")
     try:
-        infos = socket.getaddrinfo(host, None)
-    except socket.gaierror as exc:
+        infos = await asyncio.get_running_loop().getaddrinfo(host, None)
+    except OSError as exc:
         raise FetchError(f"Could not resolve host {host!r}") from exc
     for info in infos:
         ip = ipaddress.ip_address(info[4][0])
@@ -56,7 +59,7 @@ async def fetch(url: str, client: httpx.AsyncClient) -> httpx.Response:
     """GET with the SSRF guard applied to the URL and every redirect hop."""
     current = url
     for _ in range(MAX_REDIRECTS + 1):
-        assert_public_http_url(current)
+        await assert_public_http_url(current)
         response = await client.get(
             current,
             headers={"User-Agent": USER_AGENT},

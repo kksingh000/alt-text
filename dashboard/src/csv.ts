@@ -12,7 +12,10 @@ const HEADERS = [
 ] as const;
 
 function escapeCell(value: string): string {
-  return /[",\n\r]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+  // Alt text is scraped from arbitrary sites: neutralize spreadsheet formula
+  // injection (=, +, -, @, tab, CR at cell start) before RFC 4180 quoting.
+  const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[",\n\r]/.test(guarded) ? `"${guarded.replaceAll('"', '""')}"` : guarded;
 }
 
 export function auditToCsv(audit: AuditResponse): string {

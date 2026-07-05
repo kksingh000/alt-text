@@ -10,7 +10,10 @@
     "skipLibCheck": true,
     "noUncheckedIndexedAccess": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "@alt-text/scorer": ["../packages/scorer/ts/src/index.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

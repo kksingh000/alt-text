@@ -1,5 +1,5 @@
 import { imageInputFromElement, scoreImage, summarize } from '@alt-text/scorer';
-import type { AltTextCategory, ScoreResult } from '@alt-text/scorer';
+import type { CategoryCounts, ScoreResult } from '@alt-text/scorer';
 import { getCaptionForImage } from './captioning';
 
 /**
@@ -8,7 +8,14 @@ import { getCaptionForImage } from './captioning';
  */
 export const MARKER_ATTR = 'data-altguard';
 
-export type CategoryCounts = Record<AltTextCategory, number>;
+/**
+ * The author's original alt, persisted in the DOM alongside the marker so a
+ * fresh content-script context (extension update/reload, bfcache restore) can
+ * still restore it — attribute absent means the author had no alt at all.
+ */
+export const ORIGINAL_ALT_ATTR = 'data-altguard-orig';
+
+export type { CategoryCounts };
 
 export interface ScanSummary {
   total: number;
@@ -21,6 +28,8 @@ interface ImgState {
   authorAlt: string | null;
   /** Exactly what we wrote into the alt attribute, or null if we didn't. */
   injectedAlt: string | null;
+  width: number | null;
+  height: number | null;
   result: ScoreResult;
 }
 
@@ -35,11 +44,17 @@ interface ImgState {
 export class AltTextScanner {
   private states = new WeakMap<HTMLImageElement, ImgState>();
 
-  async scan(root: ParentNode): Promise<ScanSummary> {
+  /**
+   * `isCancelled` is polled between images and after every await so a
+   * disable() that lands mid-scan stops further DOM writes immediately.
+   */
+  async scan(root: ParentNode, isCancelled?: () => boolean): Promise<ScanSummary> {
     const imgs = Array.from(root.querySelectorAll('img'));
     const results: ScoreResult[] = [];
     for (const img of imgs) {
-      results.push(await this.process(img));
+      if (isCancelled?.()) break;
+      const outcome = this.process(img, isCancelled);
+      results.push(outcome instanceof Promise ? await outcome : outcome);
     }
     return { total: imgs.length, counts: summarize(results) };
   }
@@ -49,11 +64,22 @@ export class AltTextScanner {
     for (const el of Array.from(root.querySelectorAll(`img[${MARKER_ATTR}]`))) {
       const img = el as HTMLImageElement;
       const state = this.states.get(img);
-      if (state && state.injectedAlt !== null && img.getAttribute('alt') === state.injectedAlt) {
-        if (state.authorAlt === null) img.removeAttribute('alt');
-        else img.setAttribute('alt', state.authorAlt);
+      if (state && state.injectedAlt !== null) {
+        // Only restore if our injection is still in place — never clobber an
+        // alt the author changed after we wrote ours.
+        if (img.getAttribute('alt') === state.injectedAlt) {
+          if (state.authorAlt === null) img.removeAttribute('alt');
+          else img.setAttribute('alt', state.authorAlt);
+        }
+      } else {
+        // Injected by a previous content-script context; the original
+        // survives in the attribute.
+        const original = img.getAttribute(ORIGINAL_ALT_ATTR);
+        if (original === null) img.removeAttribute('alt');
+        else img.setAttribute('alt', original);
       }
       img.removeAttribute(MARKER_ATTR);
+      img.removeAttribute(ORIGINAL_ALT_ATTR);
       this.states.delete(img);
     }
   }
@@ -63,46 +89,91 @@ export class AltTextScanner {
    * still in place, the stored original; otherwise whatever is in the DOM
    * (first visit, or the author/app changed it after we injected).
    */
-  private authorAltOf(img: HTMLImageElement): string | null {
+  private authorAltOf(img: HTMLImageElement, currentAlt: string | null): string | null {
     const state = this.states.get(img);
-    const current = img.getAttribute('alt');
-    if (state && state.injectedAlt !== null && current === state.injectedAlt) {
+    if (state && state.injectedAlt !== null && currentAlt === state.injectedAlt) {
       return state.authorAlt;
     }
-    return current;
+    if (!state && img.hasAttribute(MARKER_ATTR)) {
+      // Marked by a previous content-script context — don't adopt our own
+      // injected text as the author's alt.
+      return img.getAttribute(ORIGINAL_ALT_ATTR);
+    }
+    return currentAlt;
   }
 
-  private async process(img: HTMLImageElement): Promise<ScoreResult> {
-    const authorAlt = this.authorAltOf(img);
-    const src = img.currentSrc || img.getAttribute('src') || '';
+  /**
+   * Returns synchronously for unchanged or non-flagged images (the common
+   * case on re-scans) and goes async only when an injection — and therefore
+   * the captioning hook — is involved.
+   */
+  private process(
+    img: HTMLImageElement,
+    isCancelled?: () => boolean,
+  ): ScoreResult | Promise<ScoreResult> {
+    const input = imageInputFromElement(img);
+    const authorAlt = this.authorAltOf(img, input.alt);
+    const src = input.src ?? '';
+    const width = input.width ?? null;
+    const height = input.height ?? null;
 
     const prev = this.states.get(img);
-    if (prev && prev.src === src && prev.authorAlt === authorAlt) {
+    if (
+      prev &&
+      prev.src === src &&
+      prev.authorAlt === authorAlt &&
+      prev.width === width &&
+      prev.height === height
+    ) {
       return prev.result;
     }
 
-    const result = scoreImage({ ...imageInputFromElement(img), alt: authorAlt, src });
+    const result = scoreImage({ ...input, alt: authorAlt });
+    const state: ImgState = { src, authorAlt, injectedAlt: null, width, height, result };
 
-    let injectedAlt: string | null = null;
-    if (result.screenReaderFallback !== null) {
-      // MISSING or GENERIC — announce something meaningful. A future
-      // captioning backend slots in here; see captioning.ts.
-      const caption = await getCaptionForImage(img);
-      // For GENERIC, keep the author's text after the warning — it may still
-      // carry a hint ("Image, description may be unreliable: img_1234").
-      const fallback =
-        result.category === 'GENERIC' && authorAlt && authorAlt.trim() !== ''
-          ? `${result.screenReaderFallback}: ${authorAlt.trim()}`
-          : result.screenReaderFallback;
-      injectedAlt = caption ?? fallback;
-      img.setAttribute('alt', injectedAlt);
-      img.setAttribute(MARKER_ATTR, result.category.toLowerCase());
-    } else if (img.hasAttribute(MARKER_ATTR)) {
-      // Previously flagged, now fine (the author fixed it) — clear our mark.
-      img.removeAttribute(MARKER_ATTR);
+    if (result.screenReaderFallback === null) {
+      if (img.hasAttribute(MARKER_ATTR)) {
+        // Previously flagged, now fine (the author fixed it) — clear our mark.
+        img.removeAttribute(MARKER_ATTR);
+        img.removeAttribute(ORIGINAL_ALT_ATTR);
+      }
+      this.states.set(img, state);
+      return result;
+    }
+    return this.inject(img, state, isCancelled);
+  }
+
+  private async inject(
+    img: HTMLImageElement,
+    state: ImgState,
+    isCancelled?: () => boolean,
+  ): Promise<ScoreResult> {
+    const { authorAlt, result } = state;
+    const altBefore = img.getAttribute('alt');
+
+    // MISSING or GENERIC — announce something meaningful. A future
+    // captioning backend slots in here; see captioning.ts.
+    const caption = await getCaptionForImage(img);
+
+    // Re-validate after the await: scanning may have been disabled, the img
+    // detached, or the page's own JS may have set a real alt meanwhile.
+    if (isCancelled?.() || !img.isConnected || img.getAttribute('alt') !== altBefore) {
+      return result;
     }
 
-    this.states.set(img, { src, authorAlt, injectedAlt, result });
+    // For GENERIC, keep the author's text after the warning — it may still
+    // carry a hint ("Image, description may be unreliable: img_1234").
+    const fallback =
+      result.category === 'GENERIC' && authorAlt && authorAlt.trim() !== ''
+        ? `${result.screenReaderFallback}: ${authorAlt.trim()}`
+        : (result.screenReaderFallback as string);
+    state.injectedAlt = caption ?? fallback;
+
+    if (authorAlt === null) img.removeAttribute(ORIGINAL_ALT_ATTR);
+    else img.setAttribute(ORIGINAL_ALT_ATTR, authorAlt);
+    img.setAttribute('alt', state.injectedAlt);
+    img.setAttribute(MARKER_ATTR, result.category.toLowerCase());
+    this.states.set(img, state);
     return result;
   }
 }

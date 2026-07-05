@@ -27,6 +27,7 @@ class ImageResult(BaseModel):
     label: str
     wcag: WcagRef
     suggested_fix: str
+    screen_reader_fallback: Optional[str] = None
     suggested_caption: Optional[str] = None
 
 

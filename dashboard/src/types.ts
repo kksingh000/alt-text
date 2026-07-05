@@ -1,8 +1,10 @@
 // Mirrors the FastAPI response models in backend/app/models.py.
+// The category union comes from the shared scorer package so it cannot
+// silently drift from the spec.
 
-export type AltTextCategory = 'MISSING' | 'GENERIC' | 'DECORATIVE_UNMARKED' | 'GOOD';
+import type { AltTextCategory, CategoryCounts } from '@alt-text/scorer';
 
-export type CategoryCounts = Record<AltTextCategory, number>;
+export type { AltTextCategory, CategoryCounts };
 
 export interface WcagRef {
   criterion: string;
@@ -20,6 +22,7 @@ export interface ImageResult {
   label: string;
   wcag: WcagRef;
   suggested_fix: string;
+  screen_reader_fallback: string | null;
   suggested_caption: string | null;
 }
 

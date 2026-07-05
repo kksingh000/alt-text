@@ -33,6 +33,7 @@ function makeAudit(): AuditResponse {
             label: 'Missing alt text',
             wcag: WCAG,
             suggested_fix: 'Add an alt attribute, e.g. alt="Golden retriever".',
+            screen_reader_fallback: 'Image, no description available',
             suggested_caption: null,
           },
           {
@@ -44,6 +45,19 @@ function makeAudit(): AuditResponse {
             label: 'Generic or placeholder alt text',
             wcag: WCAG,
             suggested_fix: 'Replace the placeholder.',
+            screen_reader_fallback: 'Image, description may be unreliable',
+            suggested_caption: null,
+          },
+          {
+            src: 'https://example.com/evil.jpg',
+            alt: '=HYPERLINK("http://evil.example","click")',
+            category: 'GENERIC',
+            reason: 'generic-pattern',
+            severity: 'warning',
+            label: 'Generic or placeholder alt text',
+            wcag: WCAG,
+            suggested_fix: 'Replace the placeholder.',
+            screen_reader_fallback: 'Image, description may be unreliable',
             suggested_caption: null,
           },
         ],
@@ -55,7 +69,7 @@ function makeAudit(): AuditResponse {
 describe('auditToCsv', () => {
   it('emits a header row plus one row per image', () => {
     const lines = auditToCsv(makeAudit()).trimEnd().split('\r\n');
-    expect(lines).toHaveLength(3);
+    expect(lines).toHaveLength(4);
     expect(lines[0]).toBe(
       'page_url,image_src,alt_text,category,reason,severity,wcag_criterion,suggested_fix',
     );
@@ -68,5 +82,11 @@ describe('auditToCsv', () => {
     expect(csv).toContain('"img, ""1234""\nline two"');
     // The quoted fix with a comma is wrapped, quotes doubled.
     expect(csv).toContain('"Add an alt attribute, e.g. alt=""Golden retriever""."');
+  });
+
+  it('neutralizes spreadsheet formula injection in scraped alt text', () => {
+    const csv = auditToCsv(makeAudit());
+    expect(csv).toContain('"\'=HYPERLINK(""http://evil.example"",""click"")"');
+    expect(csv).not.toContain(',=HYPERLINK');
   });
 });

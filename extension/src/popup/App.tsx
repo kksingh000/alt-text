@@ -1,30 +1,14 @@
 import { useEffect, useState } from 'react';
 import browser from 'webextension-polyfill';
-import type { AltTextCategory } from '@alt-text/scorer';
+import { CATEGORY_ORDER, countIssues, SPEC } from '@alt-text/scorer';
 import type { ContentRequest, PageReport } from '../shared/messages';
 
-const CATEGORY_ROWS: Array<{ key: AltTextCategory; label: string; hint: string }> = [
-  {
-    key: 'MISSING',
-    label: 'Missing',
-    hint: 'No alt attribute, or an empty alt on a content image',
-  },
-  {
-    key: 'GENERIC',
-    label: 'Generic',
-    hint: 'Filename-style or placeholder alt text (img_1234, "photo", …)',
-  },
-  {
-    key: 'DECORATIVE_UNMARKED',
-    label: 'Unmarked decorative',
-    hint: 'Looks decorative but is not hidden from screen readers',
-  },
-  {
-    key: 'GOOD',
-    label: 'Good',
-    hint: 'Descriptive alt text, or correctly marked decorative',
-  },
-];
+// UI copy comes from the shared spec so every surface says the same thing.
+const CATEGORY_ROWS = CATEGORY_ORDER.map((key) => ({
+  key,
+  label: SPEC.categories[key].shortLabel,
+  hint: SPEC.categories[key].description,
+}));
 
 type ViewState =
   | { status: 'loading' }
@@ -110,9 +94,7 @@ function ReportView({
   onToggle: () => void;
 }) {
   const host = report.host || 'this page';
-  const issues = report.counts
-    ? report.counts.MISSING + report.counts.GENERIC + report.counts.DECORATIVE_UNMARKED
-    : 0;
+  const issues = report.counts ? countIssues(report.counts) : 0;
 
   return (
     <>

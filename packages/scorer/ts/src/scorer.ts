@@ -1,5 +1,13 @@
 import { SPEC } from './spec.data.js';
-import type { AltTextCategory, ImageInput, ReasonCode, ScoreResult } from './types.js';
+import type { AltTextCategory, CategoryCounts, ImageInput, ReasonCode, ScoreResult } from './types.js';
+
+/** Display order shared by every UI surface. */
+export const CATEGORY_ORDER: readonly AltTextCategory[] = [
+  'MISSING',
+  'GENERIC',
+  'DECORATIVE_UNMARKED',
+  'GOOD',
+];
 
 const genericWords = new Set(SPEC.genericWords);
 const genericAltPatterns = SPEC.genericAltPatterns.map((p) => new RegExp(p, 'i'));
@@ -119,8 +127,16 @@ export function scoreAltText(alt: string | null, src = ''): ScoreResult {
 }
 
 /** Counts results per category — what the extension popup and dashboard both display. */
-export function summarize(results: Iterable<Pick<ScoreResult, 'category'>>): Record<AltTextCategory, number> {
-  const counts: Record<AltTextCategory, number> = { MISSING: 0, GENERIC: 0, DECORATIVE_UNMARKED: 0, GOOD: 0 };
+export function summarize(results: Iterable<Pick<ScoreResult, 'category'>>): CategoryCounts {
+  const counts: CategoryCounts = { MISSING: 0, GENERIC: 0, DECORATIVE_UNMARKED: 0, GOOD: 0 };
   for (const r of results) counts[r.category] += 1;
   return counts;
+}
+
+/** Total images needing attention: every category whose severity isn't "pass". */
+export function countIssues(counts: CategoryCounts): number {
+  return CATEGORY_ORDER.reduce(
+    (n, category) => (SPEC.categories[category].severity === 'pass' ? n : n + counts[category]),
+    0,
+  );
 }

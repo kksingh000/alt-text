@@ -78,6 +78,18 @@ describe('imageInputFromElement', () => {
     expect(input.ariaHidden).toBe(true);
     expect(scoreImage(input).category).toBe('GOOD');
   });
+
+  it('parses aria-hidden case-insensitively with whitespace, like the Python mirror', () => {
+    expect(imageInputFromElement(fakeImg({ 'aria-hidden': ' True ' })).ariaHidden).toBe(true);
+    expect(imageInputFromElement(fakeImg({ 'aria-hidden': 'false' })).ariaHidden).toBe(false);
+  });
+
+  it('rejects percentage and junk dimension attributes instead of truncating them', () => {
+    const percent = imageInputFromElement(fakeImg({ width: '2%', height: '100%' }));
+    expect(percent.width).toBeNull();
+    expect(percent.height).toBeNull();
+    expect(imageInputFromElement(fakeImg({ width: ' 16 ' })).width).toBe(16);
+  });
 });
 
 describe('summarize', () => {

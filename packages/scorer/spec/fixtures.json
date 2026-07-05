@@ -235,6 +235,26 @@
       "name": "data URI src skips filename heuristics",
       "input": { "alt": "Signature of Ada Lovelace", "src": "data:image/png;base64,iVBORw0KGgo=" },
       "expected": { "category": "GOOD", "reason": "descriptive" }
+    },
+    {
+      "name": "BOM-only alt is whitespace (parity: JS trim strips U+FEFF)",
+      "input": { "alt": "﻿", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "MISSING", "reason": "whitespace-only-alt" }
+    },
+    {
+      "name": "non-ASCII digits are not generic patterns (\\d is ASCII in both engines)",
+      "input": { "alt": "٣٣٣٣٣٣", "src": "https://example.com/a.jpg" },
+      "expected": { "category": "GOOD", "reason": "descriptive" }
+    },
+    {
+      "name": "malformed percent-encoding falls back to the raw filename in both engines",
+      "input": { "alt": "spacer%ff", "src": "https://example.com/spacer%ff.jpg" },
+      "expected": { "category": "GENERIC", "reason": "matches-filename" }
+    },
+    {
+      "name": "trailing-newline filename does not match decorative patterns (JS $ semantics are canonical)",
+      "input": { "alt": null, "src": "https://example.com/1x1%0a" },
+      "expected": { "category": "MISSING", "reason": "no-alt-attribute" }
     }
   ]
 }

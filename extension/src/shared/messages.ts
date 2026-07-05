@@ -1,6 +1,6 @@
-import type { AltTextCategory } from '@alt-text/scorer';
+import type { CategoryCounts } from '@alt-text/scorer';
 
-export type CategoryCounts = Record<AltTextCategory, number>;
+export type { CategoryCounts };
 
 /** Content script → popup, in response to GET_REPORT / SET_ENABLED. */
 export interface PageReport {

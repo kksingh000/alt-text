@@ -75,6 +75,11 @@ def test_image_input_from_attrs():
     assert junk_dims.width is None
     assert junk_dims.height is None
 
+    # Percentages must not truncate to plausible pixel counts (width="2%" != 2px).
+    percent = image_input_from_attrs({"alt": "A dog", "width": "2%", "height": "100%"})
+    assert percent.width is None
+    assert percent.height is None
+
 
 def test_summarize():
     results = [
