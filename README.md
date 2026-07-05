@@ -1,5 +1,7 @@
 # alt-text — accessibility toolkit for missing & broken image descriptions
 
+[![CI](https://github.com/kksingh000/alt-text/actions/workflows/ci.yml/badge.svg)](https://github.com/kksingh000/alt-text/actions/workflows/ci.yml)
+
 A zero-cost, rule-based toolkit that finds images whose alt text is missing,
 generic, or noise for screen reader users. No paid AI APIs anywhere; clean
 extension points exist for adding a free-tier vision model later.
@@ -35,8 +37,9 @@ alt-text/
 │   │   │   └── captioning.ts      # getCaptionForImage(img) stub → returns null (hook for
 │   │   │                          #   a free vision API later; no refactor needed)
 │   │   ├── popup/                 # React: per-site toggle, category counts (WCAG AAA)
+│   │   ├── options/               # React: disabled-site list, live sync to open tabs
 │   │   ├── background/            # service worker: per-tab issue-count badge
-│   │   └── shared/                # typed messages + per-site settings
+│   │   └── shared/                # typed messages + per-site settings + theme
 │   ├── tools/gen-icons.mjs        # regenerates icons (self-contained PNG encoder)
 │   └── tests/                     # scanner unit tests (jsdom) + Playwright e2e
 │
@@ -88,6 +91,7 @@ npm run -w @alt-text/scorer build
 npm run build:extension                  # → extension/dist/chrome (load unpacked)
 npm run build:firefox -w @alt-text/extension
 npm run test:e2e -w @alt-text/extension  # loads the real extension in Chromium
+npm run package -w @alt-text/extension   # store-ready zips for Chrome + Firefox
 
 # Python (3.10+)
 python3 -m pip install pytest

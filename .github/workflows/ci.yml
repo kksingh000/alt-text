@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  typescript:
+    name: Scorer (TS) · extension · dashboard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Unit tests (all workspaces)
+        run: npm test
+      - name: Extension type check
+        run: npm run check -w @alt-text/extension
+      - name: Extension builds (Chrome + Firefox)
+        run: |
+          npm run build -w @alt-text/extension
+          npm run build:firefox -w @alt-text/extension
+      - name: Dashboard type check + build
+        run: npm run build -w @alt-text/dashboard
+
+  python:
+    name: Scorer (Python) · backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r backend/requirements-dev.txt
+      - name: Golden fixtures + backend tests
+        run: python -m pytest packages/scorer/python/tests backend/tests -q
+
+  extension-e2e:
+    name: Extension e2e (real Chromium)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Load built extension and assert DOM effects
+        run: npm run test:e2e -w @alt-text/extension

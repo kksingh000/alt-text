@@ -43,7 +43,9 @@ src/
 │                      #   a future free-tier vision API; nothing else changes.
 ├── background/index.ts# per-tab badge with the count of flagged images
 ├── popup/             # React: per-site toggle + category breakdown (WCAG AAA contrast)
-└── shared/            # typed message protocol + per-site settings (storage.local)
+├── options/           # React: manage the disabled-site list; changes apply live
+│                      #   to open tabs via storage.onChanged
+└── shared/            # typed message protocol + per-site settings + shared theme
 ```
 
 Message flow:
@@ -55,6 +57,18 @@ Message flow:
 
 Sites are **on by default**; the toggle stores an opt-out list of hostnames in
 `storage.local`, so no browsing data ever needs syncing or leaving the machine.
+The options page (right-click the icon → Options) lists every switched-off
+site with one-click re-enable; because content scripts watch
+`storage.onChanged`, enabling/disabling applies to already-open tabs
+immediately — injected alts are restored or re-applied live.
+
+## Packaging for the stores
+
+```bash
+npm run package -w @alt-text/extension
+# → extension/dist/alt-text-guardian-chrome-v0.1.0.zip   (Chrome Web Store / Edge)
+# → extension/dist/alt-text-guardian-firefox-v0.1.0.zip  (Firefox Add-ons)
+```
 
 ## Tests
 

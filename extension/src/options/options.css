@@ -1,0 +1,104 @@
+@import '../shared/theme.css';
+
+body {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 20px 40px;
+}
+
+header {
+  padding: 28px 0 16px;
+  border-bottom: 2px solid var(--ink);
+}
+
+h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.brand-accent {
+  color: var(--accent);
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+h2 {
+  margin: 28px 0 6px;
+  font-size: 16px;
+}
+
+.muted {
+  color: var(--muted);
+  margin: 6px 0;
+}
+
+.empty {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.host-list {
+  list-style: none;
+  margin: 14px 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.host-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+}
+
+.host-list li + li {
+  border-top: 1px solid var(--border);
+}
+
+.host {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button {
+  flex: none;
+  padding: 6px 14px;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--surface);
+}
+
+.enable-all {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.enable-all:hover {
+  background: var(--muted);
+  border-color: var(--muted);
+}

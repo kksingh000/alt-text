@@ -69,8 +69,48 @@ try {
     null,
     'spacer alt attribute stays absent',
   );
+  console.log('e2e OK: content script scored and annotated the fixture page');
 
-  console.log('e2e OK: content script scored and annotated the fixture page in real Chromium');
+  // --- options page + live settings sync ---
+  let [worker] = context.serviceWorkers();
+  if (!worker) worker = await context.waitForEvent('serviceworker');
+  const extensionId = new URL(worker.url()).host;
+  const options = await context.newPage();
+  await options.goto(`chrome-extension://${extensionId}/options.html`);
+  await options.waitForSelector('.empty');
+
+  // Disabling the fixture host (as the popup toggle would) must appear in the
+  // options list AND live-restore the already-open page.
+  const host = `127.0.0.1:${port}`;
+  await options.evaluate(
+    (h) => chrome.storage.local.set({ disabledHosts: [h] }),
+    host,
+  );
+  await options.waitForSelector('.host-list li');
+  assert.equal(await options.textContent('.host-list .host'), host, 'disabled host listed');
+  await page.waitForSelector('img[data-altguard]', { state: 'detached', timeout: 5000 });
+  assert.equal(
+    await page.getAttribute('#missing', 'alt'),
+    null,
+    'original (absent) alt restored when scanning is disabled remotely',
+  );
+  assert.equal(
+    await page.getAttribute('#generic', 'alt'),
+    'img_1234',
+    'original generic alt restored when scanning is disabled remotely',
+  );
+
+  // Re-enabling from the options page re-annotates the open tab.
+  await options.click('.host-list button');
+  await options.waitForSelector('.empty');
+  await page.waitForSelector('img[data-altguard]', { timeout: 5000 });
+  assert.equal(
+    await page.getAttribute('#missing', 'alt'),
+    'Image, no description available',
+    're-enabling from options re-annotates open tabs',
+  );
+
+  console.log('e2e OK: options page manages the disabled-site list with live sync');
 } finally {
   await context.close();
   server.close();

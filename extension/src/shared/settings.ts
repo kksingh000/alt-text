@@ -1,10 +1,10 @@
 import browser from 'webextension-polyfill';
 
-const KEY = 'disabledHosts';
+export const DISABLED_HOSTS_KEY = 'disabledHosts';
 
-async function getDisabledHosts(): Promise<string[]> {
-  const stored = await browser.storage.local.get(KEY);
-  const value = stored[KEY];
+export async function getDisabledHosts(): Promise<string[]> {
+  const stored = await browser.storage.local.get(DISABLED_HOSTS_KEY);
+  const value = stored[DISABLED_HOSTS_KEY];
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
 }
 
@@ -17,5 +17,9 @@ export async function setHostEnabled(host: string, enabled: boolean): Promise<vo
   const hosts = new Set(await getDisabledHosts());
   if (enabled) hosts.delete(host);
   else hosts.add(host);
-  await browser.storage.local.set({ [KEY]: [...hosts] });
+  await browser.storage.local.set({ [DISABLED_HOSTS_KEY]: [...hosts] });
+}
+
+export async function clearDisabledHosts(): Promise<void> {
+  await browser.storage.local.set({ [DISABLED_HOSTS_KEY]: [] });
 }

@@ -10,6 +10,7 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "node build.mjs && node tests/e2e.mjs",
+    "package": "node tools/package.mjs",
     "icons": "node tools/gen-icons.mjs"
   },
   "dependencies": {

@@ -21,6 +21,7 @@ await esbuild.build({
     content: 'src/content/index.ts',
     background: 'src/background/index.ts',
     popup: 'src/popup/main.tsx',
+    options: 'src/options/main.tsx',
   },
   bundle: true,
   format: 'iife',
@@ -55,6 +56,10 @@ const manifest = {
     target === 'firefox'
       ? { scripts: ['background.js'] }
       : { service_worker: 'background.js' },
+  options_ui: {
+    page: 'options.html',
+    open_in_tab: true,
+  },
   action: {
     default_popup: 'popup.html',
     default_title: 'Alt Text Guardian',
@@ -79,6 +84,7 @@ const manifest = {
 
 writeFileSync(join(outdir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 cpSync(join(here, 'src', 'popup', 'popup.html'), join(outdir, 'popup.html'));
+cpSync(join(here, 'src', 'options', 'options.html'), join(outdir, 'options.html'));
 cpSync(join(here, 'public', 'icons'), join(outdir, 'icons'), { recursive: true });
 
 console.log(`Built ${target} extension → ${outdir}`);

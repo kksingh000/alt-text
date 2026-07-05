@@ -1,0 +1,48 @@
+/* Shared product palette — WCAG AAA (≥7:1 for all text) in both color
+   schemes. Category hues are validated for color-vision-deficiency
+   separation (pairwise deutan/protan/tritan ΔE ≥ 13 in light mode) and
+   always appear with a text label, never as color alone. Keep in sync with
+   dashboard/src/index.css. */
+:root {
+  --bg: #ffffff;
+  --surface: #f4f5f7;
+  --border: #c9ced4;
+  --ink: #14181d; /* 17.8:1 on --bg */
+  --muted: #3d454e; /* 9.7:1 */
+  --accent: #705200; /* gold, 7.3:1 */
+  --missing: #9f1239; /* 8.0:1 */
+  --generic: #6b5300; /* 7.3:1 */
+  --decorative: #5b21b6; /* 9.0:1 */
+  --good: #0f3d21; /* 12.3:1 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1014;
+    --surface: #161b21;
+    --border: #4a545f;
+    --ink: #f2f5f7; /* 17.4:1 on --bg */
+    --muted: #c3cad2;
+    --accent: #e3b341; /* 9.8:1 */
+    --missing: #fda4af; /* 10.1:1 */
+    --generic: #fcd34d; /* 13.2:1 */
+    --decorative: #c4b5fd; /* 10.3:1 */
+    --good: #86efac; /* 13.6:1 */
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}

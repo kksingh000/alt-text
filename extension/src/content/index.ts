@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 import type { BadgeReport, ContentRequest, PageReport } from '../shared/messages';
-import { isHostEnabled, setHostEnabled } from '../shared/settings';
+import { DISABLED_HOSTS_KEY, isHostEnabled, setHostEnabled } from '../shared/settings';
 import { AltTextScanner, type ScanSummary } from './scanner';
 
 const SCAN_DEBOUNCE_MS = 200;
@@ -79,6 +79,17 @@ browser.runtime.onMessage.addListener((message: unknown): Promise<PageReport> | 
     })();
   }
   return undefined;
+});
+
+// Settings can change from the popup of another tab or the options page —
+// apply them live. enable()/disable() are idempotent, so the echo from our
+// own popup-triggered writes is harmless.
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !(DISABLED_HOSTS_KEY in changes)) return;
+  void (async () => {
+    if (await isHostEnabled(location.host)) await enable();
+    else disable();
+  })();
 });
 
 // Once images finish loading their natural dimensions are known, which can
