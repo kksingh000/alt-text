@@ -30,13 +30,15 @@ const server = createServer((req, res) => {
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const { port } = server.address();
 
-// The sandbox pre-installs a full Chromium; fall back to it if the npm
-// playwright version doesn't match the installed browser build.
+// Extensions need the FULL Chromium build: plain `headless: true` runs the
+// "chromium headless shell", which silently ignores --load-extension. Use the
+// sandbox's preinstalled full build when present, otherwise Playwright's full
+// build via channel 'chromium' (its documented path for headless extensions).
 const executablePath = existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined;
 
 const context = await chromium.launchPersistentContext('', {
   headless: true,
-  executablePath,
+  ...(executablePath ? { executablePath } : { channel: 'chromium' }),
   args: [
     `--disable-extensions-except=${extensionPath}`,
     `--load-extension=${extensionPath}`,
